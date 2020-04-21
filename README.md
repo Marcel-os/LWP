@@ -1,2 +1,3 @@
 ﻿# Linefollower
-Wszystkie pliki do projektu zespołowego
+Pliki związane z budową robota LF
+
