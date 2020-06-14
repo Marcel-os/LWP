@@ -8,7 +8,7 @@
 #define LINE_SENSOR_6 A2
 #define LINE_SENSOR_7 A1
 
-#define  OFFSET 10
+#define  OFFSET 15
 
 #define DISTANCE_SENSOR A0
 
@@ -22,7 +22,8 @@
 #define MOTOR_R_PIN2 19
 
 #define THRESHOLD_LINE 500
-#define THRESHOLD_DISTANCE 500
+#define THRESHOLD_DISTANCE 250
+
 
 
 void setup() {
@@ -45,7 +46,7 @@ void setup() {
 
 void go_straight(byte PWM){
   analogWrite(PWM_L_PIN, PWM);
-  analogWrite(PWM_R_PIN, PWM-2);
+  analogWrite(PWM_R_PIN, PWM);
   
   digitalWrite(MOTOR_L_PIN1, LOW);
   digitalWrite(MOTOR_L_PIN2, HIGH);
@@ -53,7 +54,34 @@ void go_straight(byte PWM){
   digitalWrite(MOTOR_R_PIN2, HIGH);
 }
 
-void smooth_turning(byte PWM_L, byte PWM_R){
+void smooth_turning(int PWM_L, int PWM_R){
+  if(PWM_L > 255) PWM_L = 255;
+  if(PWM_R > 255) PWM_R = 255;
+  if(PWM_L < 0) PWM_L = 0;
+  if(PWM_R < 0) PWM_R = 0;
+  
+//  Serial.print(PWM_L);
+//  Serial.print("\t");
+//  Serial.print(PWM_R);
+//  Serial.print("\n");
+  
+//  if(PWM_L < 0){
+//    PWM_L = -PWM_L;
+//    digitalWrite(MOTOR_L_PIN1, LOW);
+//    digitalWrite(MOTOR_L_PIN2, HIGH);
+//    digitalWrite(MOTOR_R_PIN1, HIGH);
+//    digitalWrite(MOTOR_R_PIN2, LOW);
+//    return;
+//  }
+//  if(PWM_R < 0){
+//    PWM_R = -PWM_R;
+//    digitalWrite(MOTOR_L_PIN1, HIGH);
+//    digitalWrite(MOTOR_L_PIN2, LOW);
+//    digitalWrite(MOTOR_R_PIN1, LOW);
+//    digitalWrite(MOTOR_R_PIN2, HIGH);
+//    return;
+//  }
+  
   analogWrite(PWM_L_PIN, PWM_L);
   analogWrite(PWM_R_PIN, PWM_R);
   
@@ -72,21 +100,77 @@ void go_stop(){
   digitalWrite(MOTOR_R_PIN1, LOW);
   digitalWrite(MOTOR_R_PIN2, LOW);
 }
+
+void rotateR(byte PWM){
+
+  analogWrite(PWM_L_PIN, PWM);
+  analogWrite(PWM_R_PIN, PWM);
+  
+  digitalWrite(MOTOR_L_PIN1, HIGH);
+  digitalWrite(MOTOR_L_PIN2, LOW);
+  digitalWrite(MOTOR_R_PIN1, LOW);
+  digitalWrite(MOTOR_R_PIN2, HIGH);
+
+  delay(390);
+  go_stop();
+}
+
+void rotateL(byte PWM){
+
+  analogWrite(PWM_L_PIN, PWM);
+  analogWrite(PWM_R_PIN, PWM);
+  
+  digitalWrite(MOTOR_L_PIN1, LOW);
+  digitalWrite(MOTOR_L_PIN2, HIGH);
+  digitalWrite(MOTOR_R_PIN1, HIGH);
+  digitalWrite(MOTOR_R_PIN2, LOW);
+
+  delay(450);
+  go_stop();
+}
+
+void go_around(){
+  if(analogRead(DISTANCE_SENSOR) >= THRESHOLD_DISTANCE + 20 ){
+      go_stop();
+  
+  analogWrite(PWM_L_PIN, 50);
+  analogWrite(PWM_R_PIN, 50);
+
+  rotateR(50);
+  go_straight(50);
+  delay(1000);
+  rotateL(50);
+  go_straight(50);
+  delay(1500);
+  rotateL(50);
+  go_stop();
+  while( analogRead(LINE_SENSOR_4) < THRESHOLD_LINE ){
+    go_straight(50);
+    delay(10);
+  }
+  go_stop();
+  //go right 90*
+  //go straight
+  //go left 90*
+  //go straight
+  //go left 90*
+  //go straight
+  }
+  return;
+}
+
 long pozycja = 0;
 long pozycja_last = 0;
 
-double KP = 0.5;
-double KD = 2.5;
+double KP = 5.0;
+double KD = 8.0;
 
 double error_P = 0;
 double error_D = 0;
 int Error = 0;
 
 void loop() {
-//  go_straight(64);
-//  delay(1000);
-//  go_stop();
-//  delay(1000);
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 long SENSOR1 = analogRead(LINE_SENSOR_1);
 long SENSOR2 = analogRead(LINE_SENSOR_2);
 long SENSOR3 = analogRead(LINE_SENSOR_3);
@@ -95,54 +179,41 @@ long SENSOR5 = analogRead(LINE_SENSOR_5);
 long SENSOR6 = analogRead(LINE_SENSOR_6);
 long SENSOR7 = analogRead(LINE_SENSOR_7);
 
+long DISTANCE = analogRead(DISTANCE_SENSOR);
+  Serial.print(DISTANCE);
+  Serial.print("\n");
+
 long suma = (SENSOR1 + SENSOR2 + SENSOR3 + SENSOR4 + SENSOR5 + SENSOR6 + SENSOR7);
 long sr = (SENSOR1*-3*OFFSET + SENSOR2*-2*OFFSET + SENSOR3*-1*OFFSET + SENSOR4*0*OFFSET + SENSOR5*1*OFFSET + SENSOR6*2*OFFSET + SENSOR7*3*OFFSET);
 pozycja = sr/suma;
 
-error_P = pozycja * KP; // zależność liniowa
-error_D = (pozycja - pozycja_last) * KD; // różnica pomiędzy pomiarami
-Error = (int)(error_P + error_D); // suma członów regulatora
+byte VEL = 30;
+
+error_P = pozycja * KP; // zaleĹĽnoĹ›Ä‡ liniowa
+error_D = (pozycja - pozycja_last) * KD; // rĂłĹĽnica pomiÄ™dzy pomiarami
+Error = (int)(error_P + error_D); // suma czĹ‚onĂłw regulatora
 pozycja_last = pozycja;
 
-//  Serial.print(error_P);
-//  Serial.print("\t");
-//  Serial.print(error_D);
-//  Serial.print("\t");
-//  Serial.print(pozycja);
-//  Serial.print("\n");
-
-if(Error > 0){
-  smooth_turning(40 + Error, 40);
-} else {
-  smooth_turning(40, 40 - Error);
+if( abs(Error) <= 15 ){
+  VEL += 60;
 }
 
-//
-//  Serial.print(pozycja);
-//  Serial.print("\t");
-//  //Serial.println(SENSOR1*-3*OFFSET + SENSOR2*-2*OFFSET + SENSOR3*-1*OFFSET + SENSOR4*0*OFFSET + SENSOR5*1*OFFSET + SENSOR6*2*OFFSET + SENSOR7*3*OFFSET);
-//  Serial.print("\n");
+if( abs(Error) >= 30 ){
+  VEL -= 15;
+}
 
-//  Serial.print(SENSOR1);
-//  Serial.print("\t");
-//  Serial.print(SENSOR2);
-//  Serial.print("\t");
-//  Serial.print(SENSOR3);
-//  Serial.print("\t");
-//  Serial.print(SENSOR4);
-//  Serial.print("\t");
-//  Serial.print(SENSOR5);
-//  Serial.print("\t");
-//  Serial.print(SENSOR6);
-//  Serial.print("\t");
-//  Serial.print(SENSOR7);
-//  Serial.print("\t");
-//  Serial.println(analogRead(LINE_SENSOR_7));
-//  Serial.println("\t");
-//  Serial.println(analogRead(DISTANCE_SENSOR));
-//  if( SENSOR1 > THRESHOLD_LINE && SENSOR2 > THRESHOLD_LINE && SENSOR3 > THRESHOLD_LINE && SENSOR4 > THRESHOLD_LINE && SENSOR5 > THRESHOLD_LINE && SENSOR6 > THRESHOLD_LINE && SENSOR7 > THRESHOLD_LINE){
-//    go_stop();
-//  }
+if(DISTANCE > THRESHOLD_DISTANCE){
+  go_stop();
+  go_around();
+}else{
+  if(Error > 0){
+  smooth_turning(VEL - Error, VEL + Error);
+  }else {
+  smooth_turning(VEL - Error, VEL + Error);
+  }
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 //  if( (SENSOR1 < THRESHOLD_LINE && SENSOR2 < THRESHOLD_LINE && SENSOR3 > THRESHOLD_LINE && SENSOR4 > THRESHOLD_LINE && SENSOR5 > THRESHOLD_LINE && SENSOR6 < THRESHOLD_LINE && SENSOR7 < THRESHOLD_LINE) ||
 //      (SENSOR1 < THRESHOLD_LINE && SENSOR2 < THRESHOLD_LINE && SENSOR3 > THRESHOLD_LINE && SENSOR4 > THRESHOLD_LINE && SENSOR5 < THRESHOLD_LINE && SENSOR6 < THRESHOLD_LINE && SENSOR7 < THRESHOLD_LINE) ||
 //      (SENSOR1 < THRESHOLD_LINE && SENSOR2 < THRESHOLD_LINE && SENSOR3 < THRESHOLD_LINE && SENSOR4 > THRESHOLD_LINE && SENSOR5 > THRESHOLD_LINE && SENSOR6 < THRESHOLD_LINE && SENSOR7 < THRESHOLD_LINE) ||
@@ -153,3 +224,4 @@ if(Error > 0){
   delay(10);
 
 }
+
