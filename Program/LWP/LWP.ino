@@ -222,6 +222,4 @@ if(DISTANCE > THRESHOLD_DISTANCE){
 //  }else go_stop();
 
   delay(10);
-
 }
-
