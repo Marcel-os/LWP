@@ -24,8 +24,6 @@
 #define THRESHOLD_LINE 500
 #define THRESHOLD_DISTANCE 250
 
-
-
 void setup() {
   Serial.begin(115200);
   
@@ -225,6 +223,4 @@ if(DISTANCE > THRESHOLD_DISTANCE){
 //  }else go_stop();
 
   delay(10);
-
 }
-
