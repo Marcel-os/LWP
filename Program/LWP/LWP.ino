@@ -32,8 +32,8 @@ unsigned long ACTUAL_TIME = 0;
 unsigned long SAVED_TIME = 0;
 unsigned long DELTA_TIME = 0;
 
-long pozycja = 0;
-long pozycja_last = 0;
+long pos = 0;
+long pos_last = 0;
 
 void go_straight(byte PWM);
 void smooth_turning(int PWM_L, int PWM_R);
@@ -63,7 +63,6 @@ void setup() {
 }
 
 void loop(){
-  
   int error_P = 0;
   int error_D = 0;
   int Error = 0;
@@ -84,14 +83,14 @@ void loop(){
     
     long DISTANCE = analogRead(DISTANCE_SENSOR);     //Odczyt czujnika odległości
     
-    long suma = (SENSOR1 + SENSOR2 + SENSOR3 + SENSOR4 + SENSOR5 + SENSOR6 + SENSOR7);
-    long sr = (SENSOR1*-6*SCALE_READINGS + SENSOR2*-3*SCALE_READINGS + SENSOR3*-1*SCALE_READINGS + SENSOR4*0*SCALE_READINGS + SENSOR5*1*SCALE_READINGS + SENSOR6*3*SCALE_READINGS + SENSOR7*6*SCALE_READINGS);
-    pozycja = sr/suma;                               //Wyznaczenie aktualnej pozycji robota
+    long sum = (SENSOR1 + SENSOR2 + SENSOR3 + SENSOR4 + SENSOR5 + SENSOR6 + SENSOR7);
+    long average = (SENSOR1*-6*SCALE_READINGS + SENSOR2*-3*SCALE_READINGS + SENSOR3*-1*SCALE_READINGS + SENSOR4*0*SCALE_READINGS + SENSOR5*1*SCALE_READINGS + SENSOR6*3*SCALE_READINGS + SENSOR7*6*SCALE_READINGS);
+    pos = average/sum;                               //Wyznaczenie aktualnej pozycji robota
     
-    error_P = pozycja * KP;                          //Wyliczenie członu P - proporcjonalego
-    error_D = (pozycja - pozycja_last) * KD;         //Wyliczenie członu D - różniczkującego
+    error_P = pos * KP;                          //Wyliczenie członu P - proporcjonalego
+    error_D = (pos - pos_last) * KD;         //Wyliczenie członu D - różniczkującego
     Error = error_P + error_D;                       //Suma P + D, czyli regulator PD
-    pozycja_last = pozycja;
+    pos_last = pos;
    
     int VEL = AVERAGE_SPEED ;                        //Redukacja oraz wzmocnienie prędkości bazowej na podstawie aktualnego uchybu uchybu.
     if( abs(Error) >= 25 ) VEL -= 45;
@@ -104,7 +103,8 @@ void loop(){
       search_line(Error);                            //Funkcja poszukująca lini po wyjechaniu poza nią wszytskimi czujnikami, skręca robotem w stronę z której ostatnio była linia.
     }else if(suma > 5000){                                  
       go_stop();                                     //Jeżeli nie widzi nic zatrzymuje się.
-    }else smooth_turning(VEL - Error, VEL + Error);  //Jeżeli widzi odpowiednio linie jedzie po niej.
+    }else
+      smooth_turning(VEL - Error, VEL + Error);  //Jeżeli widzi odpowiednio linie jedzie po niej.
   }
 }
 
@@ -150,7 +150,6 @@ void go_stop(){
 }
 
 void rotateR(byte PWM){
-
   analogWrite(PWM_L_PIN, PWM);
   analogWrite(PWM_R_PIN, PWM);
   
@@ -164,7 +163,6 @@ void rotateR(byte PWM){
 }
 
 void rotateL(byte PWM){
-
   analogWrite(PWM_L_PIN, PWM);
   analogWrite(PWM_R_PIN, PWM);
   
@@ -178,7 +176,6 @@ void rotateL(byte PWM){
 }
 
 void search_rotateL(byte PWM){
-
   analogWrite(PWM_L_PIN, PWM);
   analogWrite(PWM_R_PIN, PWM);
   
@@ -189,7 +186,6 @@ void search_rotateL(byte PWM){
 }
 
 void search_rotateR(byte PWM){
-
   analogWrite(PWM_L_PIN, PWM);
   analogWrite(PWM_R_PIN, PWM);
   
@@ -198,7 +194,6 @@ void search_rotateR(byte PWM){
   digitalWrite(MOTOR_R_PIN1, LOW);
   digitalWrite(MOTOR_R_PIN2, HIGH);
 }
-
 
 void go_around(){
   if(analogRead(DISTANCE_SENSOR) >= THRESHOLD_DISTANCE + 20 ){
@@ -222,8 +217,7 @@ void go_around(){
   return;
 }
 
-void search_line(int err){
-  
+void search_line(int err){ 
   while( analogRead(LINE_SENSOR_4) < THRESHOLD_LINE ){
     if( err > 0 )  search_rotateR(40);
       else search_rotateL(40);
@@ -236,4 +230,3 @@ void search_line(int err){
   delay(5);
   return;
 }
-
